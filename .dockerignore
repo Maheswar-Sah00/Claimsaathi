@@ -1,0 +1,11 @@
+.git
+.venv
+.env
+.pytest_cache
+**/__pycache__
+data
+evidence/RUN-*
+docs/screenshots
+docs/diagrams/*.excalidraw
+*.db
+*.db-journal
