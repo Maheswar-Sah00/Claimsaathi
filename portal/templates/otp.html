@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Enter OTP{% endblock %}
+{% block content %}
+<span class="eyebrow">Verify</span>
+<h1>Enter the one-time password</h1>
+<p class="lead" style="margin-bottom:22px">A 6-digit OTP was generated for <strong>{{ challenge.username }}</strong>. In this demo it appears in the
+  simulated SMS panel below. A person must read it and type it in.</p>
+{% if error %}<p id="otp-error" class="alert" role="alert">{{ error }}</p>{% endif %}
+<div class="otp-layout">
+  <form id="otp-form" method="post" action="/otp" class="card narrow">
+    <label>OTP <input id="otp" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>
+    <button id="otp-submit" type="submit" style="width:100%">Verify</button>
+  </form>
+  <aside id="demo-sms-panel" class="sms" aria-label="Simulated SMS">
+    <p class="sms-label">DEMO SMS — SIMULATION. NO REAL SMS WAS SENT.</p>
+    <p class="sms-body">DemoTPA: <strong id="demo-sms-otp">{{ challenge.code }}</strong> is your OTP to sign in. Valid 5 minutes. Do not share it.</p>
+    <p class="muted small">Expires {{ challenge.expires_at | ist }}</p>
+  </aside>
+</div>
+<form method="post" action="/otp/resend" class="inline"><button type="submit" class="link">Resend OTP</button></form>
+{% endblock %}

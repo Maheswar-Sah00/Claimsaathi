@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}How it works · ClaimSaathi{% endblock %}
+{% block content %}
+{% set portal = portal_url or "http://127.0.0.1:8001" %}
+<div class="tour" id="tour">
+  <div class="tour-top">
+    <span class="eyebrow">Guided walkthrough</span>
+    <span class="tour-count muted small" id="tour-count" aria-live="polite"></span>
+  </div>
+  <div class="tour-bar" aria-hidden="true"><span id="tour-progress"></span></div>
+
+  <section class="card tour-step" data-title="Welcome">
+    <span class="eyebrow plain">Welcome</span>
+    <h1>Let’s walk through ClaimSaathi together.</h1>
+    <p class="lead">You’ll play Arjun, whose father Ramesh is in hospital. In about five minutes you’ll check his claim,
+      send a missing document, and see how the agent handles consent, tricky statuses and portal timeouts.</p>
+    <div class="tour-note">
+      <strong>Before you start</strong>
+      <ul>
+        <li>The mock TPA portal is running at <a href="{{ portal }}" target="_blank" rel="noopener">{{ portal }}</a>.</li>
+        <li>This agent is running (you’re looking at it).</li>
+        <li>Optional: run <code>.\scripts\reset_demo.ps1</code> for clean demo data.</li>
+      </ul>
+    </div>
+    <p class="muted small">Each step has a <em>Try it</em> button that opens the real page in a new tab, so this guide stays
+      open here. Use <kbd>←</kbd> <kbd>→</kbd> or the buttons below to move.</p>
+  </section>
+
+  <section class="card tour-step" data-title="Meet the family">
+    <span class="eyebrow plain">The setup</span>
+    <h2>One family, one policy, three claims.</h2>
+    <p>Policy <code>POL-HDF-778812</code> is a family floater. Everyone and everything here is synthetic.</p>
+    <div class="table-wrap">
+      <table class="table stack-mobile">
+        <thead><tr><th>Person</th><th>Who</th><th>Consent for Arjun</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Person"><strong>Arjun</strong> (31)</td><td data-label="Who">The son: that’s you</td><td data-label="Consent">—</td></tr>
+          <tr><td data-label="Person"><strong>Ramesh</strong> (62)</td><td data-label="Who">Father, patient</td><td data-label="Consent"><span class="chip ok">Given</span></td></tr>
+          <tr><td data-label="Person"><strong>Lakshmi</strong> (58)</td><td data-label="Who">Mother, patient</td><td data-label="Consent"><span class="chip bad">Not given</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <table class="table stack-mobile">
+        <thead><tr><th>Claim</th><th>Patient</th><th>Portal says</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Claim"><code>CLM-2026-0142</code></td><td data-label="Patient">Ramesh</td><td data-label="Portal says">Query Raised: needs a pharmacy invoice and indoor case papers</td></tr>
+          <tr><td data-label="Claim"><code>CLM-2026-0150</code></td><td data-label="Patient">Lakshmi</td><td data-label="Portal says">Under Review</td></tr>
+          <tr><td data-label="Claim"><code>CLM-2026-0163</code></td><td data-label="Patient">Ramesh</td><td data-label="Portal says">Pending Final Authorisation, pre-auth APPROVED Rs 50,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card tour-step" data-title="Sign in as Arjun">
+    <span class="eyebrow plain">Sign in</span>
+    <h2>Sign in as Arjun.</h2>
+    <ol class="walk-steps">
+      <li>Open the sign-in page and choose <strong>Arjun</strong>.</li>
+      <li>A demo OTP appears in the <strong>simulated SMS panel</strong> on that page. No real SMS is sent.</li>
+      <li>Type the code. You land on your dashboard.</li>
+    </ol>
+    <div class="tour-try"><a class="button" href="/auth/login?next=/dashboard" target="_blank" rel="noopener">Try it: open sign-in ↗</a></div>
+  </section>
+
+  <section class="card tour-step" data-title="Ask about the claim">
+    <span class="eyebrow plain">Ask</span>
+    <h2>Ask: “Where is my father’s claim?”</h2>
+    <ol class="walk-steps">
+      <li>On the <strong>Dashboard</strong>, keep policy <code>POL-HDF-778812</code>.</li>
+      <li>Enter claim <code>CLM-2026-0142</code>.</li>
+      <li>Choose <em>Status, and send missing documents</em> and press <strong>Check claim</strong>.</li>
+    </ol>
+    <div class="tour-note">
+      <strong>What happens behind the scenes</strong>
+      <p>Before anything else, the agent checks consent: Ramesh has allowed Arjun to read the status and upload
+        documents for this claim. Without that, the agent would stop here and never open the portal.</p>
+    </div>
+    <div class="tour-try"><a class="button" href="/dashboard" target="_blank" rel="noopener">Try it: open dashboard ↗</a></div>
+  </section>
+
+  <section class="card tour-step" data-title="Type the portal OTP">
+    <span class="eyebrow plain">Portal OTP</span>
+    <h2>The agent pauses. You type the OTP.</h2>
+    <p>The agent logs in to the TPA portal and stops at the OTP screen. Your claim page shows the portal’s own OTP
+      screen.</p>
+    <ol class="walk-steps">
+      <li>Find the 6-digit code in the portal’s <strong>simulated SMS panel</strong>.</li>
+      <li>Type it on the claim page. The run continues by itself.</li>
+    </ol>
+    <div class="tour-note">
+      <strong>Why a person?</strong>
+      <p>The agent is never allowed to read or fill an OTP. A wrong code is refused and you are asked again, a limited
+        number of times.</p>
+    </div>
+  </section>
+
+  <section class="card tour-step" data-title="What the agent found">
+    <span class="eyebrow plain">Read and match</span>
+    <h2>It reads the claim and checks your documents.</h2>
+    <p>The raw status <em>“Query Raised”</em> becomes <span class="chip">QUERY_RAISED</span> using a fixed rule table,
+      not an AI guess. Two documents are pending, and each one is checked against Arjun’s
+      <a href="/vault" target="_blank" rel="noopener">document vault</a>:</p>
+    <div class="table-wrap">
+      <table class="table stack-mobile">
+        <thead><tr><th>Request</th><th>Result</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td data-label="Request"><code>REQ-0142-01</code> pharmacy invoice</td><td data-label="Result"><span class="chip MATCHED">MATCHED</span></td>
+            <td data-label="Why"><code>pharmacy_invoice_ramesh.pdf</code>: right patient, dated within 14–18 Oct, readable. Lakshmi’s invoice and an August invoice are refused.</td></tr>
+          <tr><td data-label="Request"><code>REQ-0142-02</code> indoor case papers</td><td data-label="Result"><span class="chip HOSPITAL_SHOULD_PROVIDE">Hospital</span></td>
+            <td data-label="Why">On cashless claims the hospital sends these (IRDAI Master Circular 2024, Ch. I para 17(c)). A note to the hospital is drafted instead.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card tour-step" data-title="Approve the upload">
+    <span class="eyebrow plain">Approve</span>
+    <h2>Nothing is uploaded until you say yes.</h2>
+    <p>The run pauses again and shows an <strong>approval card</strong>:</p>
+    <ul class="plain">
+      <li>Patient, claim and the exact request it answers</li>
+      <li>The file name and a preview</li>
+      <li>Its fingerprint (SHA-256) and every check that passed</li>
+    </ul>
+    <p>Press <strong>Approve and upload</strong>, or <strong>Reject</strong>. If anything on the card changes before you
+      press, the approval is refused, so you approve exactly what you saw.</p>
+  </section>
+
+  <section class="card tour-step" data-title="Verified, with proof">
+    <span class="eyebrow plain">Verify and answer</span>
+    <h2>It checks the upload actually landed.</h2>
+    <p>After uploading, the agent re-reads the portal’s document list. Only when the same file is listed under the same
+      request does it show <span class="chip VERIFIED">VERIFIED</span>.</p>
+    <p>Then you see the answer:</p>
+    <ul class="plain">
+      <li><strong>Status card</strong> with the raw portal text and its last-updated time in IST</li>
+      <li><strong>Documents table</strong>: invoice received and verified; case papers for the hospital</li>
+      <li><strong>One next step</strong>: send the drafted note to the hospital</li>
+      <li><strong>Agent trace</strong> tab: every step, its decision, and evidence screenshots you can open</li>
+    </ul>
+  </section>
+
+  <section class="card tour-step" data-title="Mother’s claim (TC2)">
+    <span class="eyebrow plain">Consent</span>
+    <h2>Now try your mother’s claim.</h2>
+    <ol class="walk-steps">
+      <li>From the dashboard, check <code>CLM-2026-0150</code> (Lakshmi’s claim).</li>
+      <li>It stops with <span class="chip bad">NEEDS_CONSENT</span>. The portal is never opened: no login, no OTP.</li>
+      <li>A consent request goes to Lakshmi. Sign out, sign in as <strong>Lakshmi</strong>, and open
+        <strong>Consent</strong> to approve it, give fewer permissions, pick 1/7/30 days, or deny.</li>
+    </ol>
+    <div class="tour-try"><a class="button" href="/dashboard" target="_blank" rel="noopener">Try it: open dashboard ↗</a>
+      <a class="button secondary" href="/consent" target="_blank" rel="noopener">Consent page ↗</a></div>
+  </section>
+
+  <section class="card tour-step" data-title="The “approved” trap (TC3)">
+    <span class="eyebrow plain">Honest status</span>
+    <h2>“Approved” that isn’t.</h2>
+    <p>Check <code>CLM-2026-0163</code>. The portal shows <strong>pre-authorisation APPROVED Rs 50,000</strong>, but the
+      claim itself is <em>Pending Final Authorisation</em>.</p>
+    <p>ClaimSaathi reports <span class="chip UNCERTAIN">UNDER_REVIEW</span> and shows the pre-auth in a separate card.
+      The status rules only read the claim status, and a reply guard blocks words like “approved”, “settled” or “paid”
+      unless the real status allows them.</p>
+    <div class="tour-try"><a class="button" href="/dashboard" target="_blank" rel="noopener">Try it: open dashboard ↗</a></div>
+  </section>
+
+  <section class="card tour-step" data-title="Portal timeout (TC4)">
+    <span class="eyebrow plain">Timeouts</span>
+    <h2>The portal saves the file but never replies.</h2>
+    <ol class="walk-steps">
+      <li>Reset the demo data (<code>.\scripts\reset_demo.ps1</code> and the portal’s <em>Reset demo data</em>).</li>
+      <li>On the portal’s <strong>/admin</strong> page, set fault <code>timeout_after_store</code>.</li>
+      <li>Repeat steps 2–5 for <code>CLM-2026-0142</code>.</li>
+    </ol>
+    <p>The upload shows <span class="chip UNKNOWN">UNKNOWN</span> (not failed, not done). The agent re-reads the list,
+      finds the file and marks it <span class="chip VERIFIED">VERIFIED</span>: one upload, no duplicate. If the file had
+      been missing, it would ask you before retrying.</p>
+    <div class="tour-try"><a class="button" href="{{ portal }}/admin" target="_blank" rel="noopener">Try it: portal admin ↗</a></div>
+  </section>
+
+  <section class="card tour-step" data-title="Test results">
+    <span class="eyebrow plain">Proof</span>
+    <h2>Every case, tested end to end.</h2>
+    <p>The four official cases and six edge cases run against the mock portal in a real headless browser. Open
+      <strong>Test runs</strong> to see each verdict and its evidence.</p>
+    <div class="table-wrap">
+      <table class="table stack-mobile">
+        <tbody>
+          <tr><td><span class="chip">E1</span> Wrong-patient invoice</td><td><span class="chip MISMATCH">MISMATCH</span>, nothing proposed</td></tr>
+          <tr><td><span class="chip">E2</span> Consent revoked</td><td>Blocked before the portal, new request sent</td></tr>
+          <tr><td><span class="chip">E3</span> Unknown status text</td><td><span class="chip UNCERTAIN">UNCERTAIN</span>, said plainly</td></tr>
+          <tr><td><span class="chip">E4</span> Wrong OTP</td><td>Refused, asked again</td></tr>
+          <tr><td><span class="chip">E5</span> Portal down</td><td><span class="chip FETCH_FAILED">FETCH_FAILED</span>, never “no change”</td></tr>
+          <tr><td><span class="chip">E6</span> Hospital-held documents</td><td>Flagged for the hospital, never uploaded</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tour-try"><a class="button" href="/test-runs" target="_blank" rel="noopener">Try it: open test runs ↗</a></div>
+  </section>
+
+  <section class="card tour-step" data-title="You’re done">
+    <span class="eyebrow plain">Done</span>
+    <h2>That’s the whole flow.</h2>
+    <p>What you just saw, in one line each:</p>
+    <ul class="plain">
+      <li><strong>Consent first</strong>, checked again before every read and upload.</li>
+      <li><strong>A person</strong> types every OTP and approves every upload.</li>
+      <li><strong>Fixed rules, not AI</strong>, decide status, matching and upload state.</li>
+      <li><strong>Proof before “done”</strong>: only a fresh portal read marks an upload verified.</li>
+      <li><strong>No duplicates</strong>: timeouts and crashes re-read instead of re-sending.</li>
+      <li><strong>Everything on record</strong>: screenshots, page hashes, decisions and steps.</li>
+    </ul>
+    <div class="tour-try"><a class="button" href="{{ '/dashboard' if person else '/auth/login?next=/dashboard' }}">Go to the dashboard</a></div>
+  </section>
+
+  <div class="tour-nav" id="tour-nav" hidden>
+    <button type="button" class="secondary" id="tour-prev">← Back</button>
+    <div class="tour-dots" id="tour-dots" role="tablist" aria-label="Steps"></div>
+    <button type="button" id="tour-next">Next →</button>
+  </div>
+</div>
+<script src="{{ url_for('static', path='walkthrough.js') }}" defer></script>
+{% endblock %}

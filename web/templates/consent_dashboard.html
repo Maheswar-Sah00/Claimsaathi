@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Consent · ClaimSaathi{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+<span class="eyebrow">Patient consent</span>
+<h1>Consent</h1>
+<p class="lead">Who can see which claim, for how long. Revoking stops access immediately.</p>
+</div></div>
+{% if done == "approved" %}<p class="success" role="status">Consent granted.</p>
+{% elif done == "denied" %}<p class="success" role="status">Request declined. Nothing was shared.</p>
+{% elif done == "revoked" %}<p class="success" role="status">Consent revoked. Access stops immediately.</p>{% endif %}
+
+<section class="card" id="incoming-requests">
+  <h2>Requests waiting for your decision</h2>
+  {% set pending = incoming_requests | selectattr("status", "equalto", "pending") | list %}
+  {% if pending %}
+  <ul class="plain">
+    {% for r in pending %}
+    <li class="request-row" data-request-id="{{ r.id }}">
+      <strong>{{ people[r.requester_id].name }}</strong> asks to access claim <code>{{ r.claim_id }}</code>
+      ({{ r.actions | join(", ") }}). <a href="/consent/requests/{{ r.id }}">Review</a>
+      <span class="muted small">Expires {{ r.expires_at }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No pending requests.</p>{% endif %}
+</section>
+
+<section class="card" id="consents-given">
+  <h2>Access you have given</h2>
+  {% if given %}
+  <table class="table">
+    <thead><tr><th>To</th><th>Scope</th><th>Allows</th><th>Valid until</th><th>State</th><th></th></tr></thead>
+    <tbody>
+    {% for c in given %}
+      {% set active = not c.revoked and c.granted_at <= now < c.expires_at %}
+      <tr class="consent-row" data-consent-id="{{ c.id }}" data-active="{{ 'true' if active else 'false' }}">
+        <td>{{ people[c.grantee_id].name }}</td>
+        <td>{{ "All your claims on " ~ c.policy_no if c.claim_id == "*" else c.claim_id }}</td>
+        <td>{{ c.actions | join(", ") }}</td>
+        <td>{{ c.expires_at }}</td>
+        <td>{% if c.revoked %}Revoked{% elif active %}Active{% else %}Expired{% endif %}</td>
+        <td>{% if active %}
+          <form method="post" action="/consent/consents/{{ c.id }}/revoke" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button type="submit" class="danger small-btn">Revoke</button>
+          </form>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">You have not given anyone access.</p>{% endif %}
+</section>
+
+<section class="card" id="consents-received">
+  <h2>Access you have been given</h2>
+  {% if received %}
+  <table class="table">
+    <thead><tr><th>From</th><th>Scope</th><th>Allows</th><th>Valid until</th><th>State</th></tr></thead>
+    <tbody>
+    {% for c in received %}
+      {% set active = not c.revoked and c.granted_at <= now < c.expires_at %}
+      <tr class="consent-row" data-consent-id="{{ c.id }}" data-active="{{ 'true' if active else 'false' }}">
+        <td>{{ people[c.patient_id].name }}</td>
+        <td>{{ "All claims on " ~ c.policy_no if c.claim_id == "*" else c.claim_id }}</td>
+        <td>{{ c.actions | join(", ") }}</td>
+        <td>{{ c.expires_at }}</td>
+        <td>{% if c.revoked %}Revoked{% elif active %}Active{% else %}Expired{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="muted">Nobody has given you access yet.</p>{% endif %}
+</section>
+
+<section class="card" id="outgoing-requests">
+  <h2>Your requests</h2>
+  {% if outgoing_requests %}
+  <ul class="plain">
+    {% for r in outgoing_requests %}
+    <li data-request-id="{{ r.id }}" data-status="{{ r.status }}">Asked {{ people[r.patient_id].name }} for <code>{{ r.claim_id }}</code>
+      ({{ r.actions | join(", ") }}): <strong>{{ r.status }}</strong></li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No requests sent.</p>{% endif %}
+</section>
+{% endblock %}

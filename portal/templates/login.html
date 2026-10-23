@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="narrow" style="margin:0 auto">
+  <span class="eyebrow">Member sign-in</span>
+  <h1>Sign in</h1>
+  <p class="lead" style="margin-bottom:22px">Use your policy account. An OTP is required after your password.</p>
+  {% if error %}<p id="login-error" class="alert" role="alert">{{ error }}</p>{% endif %}
+  <form id="login-form" method="post" action="/login" class="card">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>Username <input id="username" name="username" autocomplete="username" required></label>
+    <label>Password <input id="password" name="password" type="password" autocomplete="current-password" required></label>
+    <button id="login-submit" type="submit" style="width:100%">Continue</button>
+  </form>
+  <p class="muted small">Demo credentials: <code>arjun</code> / <code>demo123</code> (synthetic account).</p>
+</div>
+{% endblock %}

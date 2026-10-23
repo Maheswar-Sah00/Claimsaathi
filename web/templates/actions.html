@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Uploads · ClaimSaathi{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+<span class="eyebrow">Uploads</span>
+<h1>Proposed uploads</h1>
+<p class="lead">Documents ClaimSaathi proposed to upload for you. Nothing is uploaded until you approve it, and an upload
+  counts as done only after a fresh read of the portal shows the file.</p>
+</div></div>
+{% if items %}
+<section class="card"><div class="table-wrap">
+<table id="actions" class="table">
+  <thead><tr><th>Claim</th><th>Request</th><th>State</th><th>Attempts</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for a in items %}
+    <tr class="action-row" data-action-id="{{ a.id }}" data-state="{{ a.state }}">
+      <td><a href="/actions/{{ a.id }}">{{ a.claim_id }}</a></td>
+      <td>{{ a.requirement_id }}</td>
+      <td>{{ labels[a.state] }}</td>
+      <td>{{ a.attempts }}</td>
+      <td class="nowrap muted small">{{ a.updated_at }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></section>
+{% else %}
+<p class="muted">No uploads proposed yet.</p>
+{% endif %}
+{% endblock %}

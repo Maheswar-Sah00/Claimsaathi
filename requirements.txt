@@ -1,0 +1,23 @@
+# ClaimSaathi - bounded dependencies, tested on Python 3.12 (3.11+ supported).
+
+# Web apps (agent + synthetic portal)
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+jinja2>=3.1,<4.0
+python-multipart>=0.0.9,<1.0   # form + file uploads
+itsdangerous>=2.1,<3.0         # signed session cookies (portal login)
+httpx>=0.27,<1.0               # agent -> portal HTTP, FastAPI TestClient
+
+# Config
+python-dotenv>=1.0,<2.0
+
+# Agent (used from Phase 3 onwards; installed now so the environment is stable)
+langgraph>=0.2,<2.0
+langgraph-checkpoint-sqlite>=3.0,<4.0   # workflow checkpoints in the agent's SQLite database
+google-genai>=1.0,<2.0
+playwright>=1.45,<2.0
+apscheduler>=3.10,<4.0
+browserbase>=1.0,<2.0          # optional cloud browser (BROWSER=browserbase)
+
+# Tests
+pytest>=8.0,<10.0

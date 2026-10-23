@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="eyebrow">For families tracking a claim</span>
+    <h1>Know where every family claim stands.</h1>
+    <p class="lead">ClaimSaathi is a family-side agent that answers “where is my father’s claim?” with the real status,
+      a checked list of missing documents and one next step. Uploads happen only after a human approves.</p>
+    <div class="button-row">
+      <a class="button" href="{{ '/dashboard' if person else '/auth/login?next=/dashboard' }}">{{ "Open dashboard" if person else "Check a claim" }}</a>
+      <a class="button secondary" href="/walkthrough">See how it works</a>
+      <a class="button secondary" href="/consent">Manage consent</a>
+    </div>
+  </div>
+  <div class="illus">{% include "_illustration.html" %}</div>
+</section>
+
+<section class="band">
+  <span class="eyebrow pink">How it stays safe</span>
+  <h2>Why claim tracking needs more than a chatbot.</h2>
+  <div class="features">
+    <div class="feature"><span class="num">01 / CONSENT</span><h3>Patient says yes first</h3>
+      <p>Nothing about a claim is read without the patient’s consent. Patients review and revoke it on the <a href="/consent">Consent</a> page.</p></div>
+    <div class="feature"><span class="num">02 / STATUS</span><h3>The real status, with proof</h3>
+      <p>Every answer comes from a portal read with a saved screenshot. A pre-authorisation is never mistaken for an approval.</p></div>
+    <div class="feature"><span class="num">03 / APPROVAL</span><h3>You approve every upload</h3>
+      <p>Missing documents are matched to the right patient and dates, then wait for your approval before anything is sent.</p></div>
+  </div>
+  <p class="meta-row">
+    <span>All people, policies and claims are synthetic</span>
+    <span>Demo TPA portal: <a href="{{ portal_url }}">{{ portal_url }}</a></span>
+    <span>Agent v{{ version }} · <a href="/health">/health</a> · <a href="/health/ready">/health/ready</a> · <a href="/docs">API docs</a></span>
+  </p>
+</section>
+{% endblock %}

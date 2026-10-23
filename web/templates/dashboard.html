@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · ClaimSaathi{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Dashboard</span>
+    <h1>Hello, {{ me.name }}</h1>
+    <p class="lead">Check where a family claim stands, see which documents are still needed, and send them only when you say so.</p>
+  </div>
+</div>
+
+{% if error %}
+{% set errors = {"invalid_request": "That claim or policy number does not look right. Claim numbers look like CLM-2026-0142.",
+                 "csrf_failed": "The form expired. Please try again."} %}
+<p class="alert" id="workflow-error" data-error-code="{{ error }}" role="alert">{{ errors.get(error, "That did not work (" ~ error ~ ").") }}</p>
+{% endif %}
+
+<div class="grid grid-2">
+  <section class="card" aria-labelledby="start-title">
+    <h2 id="start-title">Check a claim</h2>
+    <form method="post" action="/workflows" id="start-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <label>Asking as
+        <input value="{{ me.name }} ({{ me.id }})" readonly aria-readonly="true">
+        <span class="hint">Who is asking always comes from your sign-in.</span>
+      </label>
+      <label for="policy_no">Policy number
+        <input id="policy_no" name="policy_no" list="policy-list" value="{{ policies[0] if policies else '' }}"
+               pattern="POL-[A-Za-z0-9-]{3,41}" autocomplete="off" required>
+      </label>
+      <datalist id="policy-list">{% for p in policies %}<option value="{{ p }}">{% endfor %}</datalist>
+      <label for="claim_id">Claim number
+        <input id="claim_id" name="claim_id" list="claim-list" placeholder="CLM-2026-0142" pattern="CLM-[0-9]{4}-[0-9]{4}"
+               autocomplete="off" required>
+        <span class="hint">Synthetic claims on this policy: {% for c in claims %}{{ c.claim_id }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
+      </label>
+      <datalist id="claim-list">{% for c in claims %}<option value="{{ c.claim_id }}">{% endfor %}</datalist>
+      <fieldset><legend>What do you need?</legend>
+        <label class="radio-row"><input type="radio" name="intent" value="status" checked>
+          <span>Where is the claim? <span class="hint">Reads only. Nothing is uploaded.</span></span></label>
+        <label class="radio-row"><input type="radio" name="intent" value="upload">
+          <span>Status, and send missing documents <span class="hint">Each upload waits for your approval.</span></span></label>
+      </fieldset>
+      <button type="submit" id="start-button">Check claim</button>
+    </form>
+    <p class="muted small" style="margin-top:12px">The patient's consent is checked before anything is read. When the portal asks for an OTP, you type it.</p>
+  </section>
+
+  <section class="card" aria-labelledby="consent-title" id="consent-panel">
+    <div class="card-head"><h2 id="consent-title">Consent</h2><a href="/consent" class="small">Manage</a></div>
+    {% if incoming %}
+    <p class="waiting" id="incoming-requests">{{ incoming | length }} request{{ "" if incoming|length == 1 else "s" }} waiting for <strong>your</strong> decision.
+      <a href="/consent/requests/{{ incoming[0].id }}">Review</a></p>
+    {% endif %}
+    <h3>Access you have</h3>
+    {% if received %}
+    <ul class="plain" id="consents-received">
+      {% for c in received %}
+      {% set active = not c.revoked and c.expires_at > now %}
+      <li data-consent-id="{{ c.id }}">
+        <span class="chip {{ 'ok' if active else 'bad' }}">{{ "Active" if active else ("Revoked" if c.revoked else "Expired") }}</span>
+        <strong>{{ people[c.patient_id].name }}</strong> · {{ "all claims" if c.claim_id == "*" else c.claim_id }}
+        <div class="muted small">{{ c.actions | join(", ") | replace("_", " ") }} · until {{ c.expires_at | ist }}</div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">No one has given you access yet.</p>{% endif %}
+    {% if sent %}
+    <h3>Requests you sent</h3>
+    <ul class="plain" id="consents-sent">
+      {% for r in sent %}
+      <li><span class="chip {{ {'pending': 'warn', 'approved': 'ok'}.get(r.status, 'bad') }}">{{ r.status | capitalize }}</span>
+        {{ people[r.patient_id].name }} · {{ r.claim_id }} <span class="muted small">{{ r.actions | join(", ") | replace("_", " ") }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card" aria-labelledby="runs-title">
+  <h2 id="runs-title">Your claim checks</h2>
+  {% if runs %}
+  <div class="table-wrap">
+  <table class="table stack-mobile" id="runs">
+    <thead><tr><th>Claim</th><th>Progress</th><th>Status</th><th>Started</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr class="run-row" data-run-id="{{ r.id }}">
+        <td data-label="Claim"><a href="/workflows/{{ r.id }}">{{ r.claim_id }}</a>{% if r.test_case %} <span class="chip info">{{ r.test_case }}</span>{% endif %}</td>
+        <td data-label="Progress"><span class="chip {{ r.state }}">{{ {"awaiting_human": "Waiting for you", "running": "In progress", "completed": "Done", "blocked": "Stopped", "failed": "Failed"}.get(r.state, r.state) }}</span></td>
+        <td data-label="Status">{% if r.final_status %}<span class="chip {{ r.final_status }}">{{ r.final_status | replace("_", " ") }}</span>{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td data-label="Started" class="nowrap muted small">{{ r.started_at | ist }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<p class="muted">No checks yet. Start one above.</p>{% endif %}
+</section>
+{% endblock %}

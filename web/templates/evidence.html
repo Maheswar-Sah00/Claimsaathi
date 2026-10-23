@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Evidence {{ ev.id }} · ClaimSaathi{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/workflows/{{ ev.run_id }}?tab=trace">Agent trace</a> / {{ ev.id }}</p>
+<span class="eyebrow">Evidence</span>
+<h1>Evidence {{ ev.id }}</h1>
+<section class="card" id="evidence" data-kind="{{ ev.kind }}">
+  <dl class="facts-grid">
+    <dt>What</dt><dd>{{ ev.kind | replace("_", " ") }}</dd>
+    <dt>Captured</dt><dd>{{ ev.fetched_at | ist }} <span class="muted small">({{ ev.fetched_at }})</span></dd>
+    <dt>Source</dt><dd class="hash">{{ ev.url }}</dd>
+    <dt>Run</dt><dd><a href="/workflows/{{ ev.run_id }}">{{ ev.run_id }}</a></dd>
+    <dt>HTML SHA-256</dt><dd>{% if ev.html_sha256 %}<code class="hash" id="html-sha256">{{ ev.html_sha256 }}</code>
+      {% if ev.html_hash_matches %}<span class="chip ok" id="hash-check">file matches</span>{% elif ev.html_hash_matches is false %}<span class="chip bad" id="hash-check">file does not match</span>{% endif %}
+      {% if ev.html_url %} · <a href="{{ ev.html_url }}">saved page source</a>{% endif %}{% else %}—{% endif %}</dd>
+    <dt>Recorded by</dt><dd>{{ ev.extraction_source or "-" }}</dd>
+  </dl>
+</section>
+{% if ev.screenshot_url %}
+<section class="card"><h2>Screenshot</h2><a href="{{ ev.screenshot_url }}" target="_blank" rel="noopener"><img class="shot" id="evidence-screenshot" src="{{ ev.screenshot_url }}" alt="Screenshot captured as evidence {{ ev.id }}"></a></section>
+{% endif %}
+<section class="card"><h2>Recorded fields</h2>
+  <pre class="small">{{ ev.extracted | tojson(indent=2) }}</pre>
+  {% if ev.visible_text_chars %}<p class="muted small">The page's visible text ({{ ev.visible_text_chars }} characters) is stored with this evidence for extraction.</p>{% endif %}
+</section>
+{% endblock %}

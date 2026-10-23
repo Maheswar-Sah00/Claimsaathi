@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Consent request · ClaimSaathi{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/consent">Consent</a> / Request</p>
+<span class="eyebrow">Needs a decision</span>
+<h1>Consent request</h1>
+<section class="card" id="request-scope" data-request-id="{{ req.id }}" data-status="{{ req.status }}">
+  <p><strong>{{ people[req.requester_id].name }}</strong> is asking for access to
+    <strong>{{ people[req.patient_id].name }}</strong>’s claim <code id="request-claim">{{ req.claim_id }}</code>
+    on policy <code>{{ req.policy_no }}</code>.</p>
+  <ul>
+    {% for a in req.actions %}<li><strong>{{ a }}</strong>: {{ labels[a] }}</li>{% endfor %}
+  </ul>
+  <p class="muted small">Request created {{ req.created_at }} · review by {{ req.expires_at }} · status <strong id="request-status">{{ req.status }}</strong></p>
+</section>
+
+{% if req.status == "pending" and is_patient %}
+<form id="approve-form" method="post" action="/consent/requests/{{ req.id }}/approve" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <h2>Your decision</h2>
+  <fieldset>
+    <legend>Allow</legend>
+    {% for a in req.actions %}
+    <label class="radio-row"><input type="checkbox" name="actions" value="{{ a }}" checked> {{ labels[a] }}</label>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend>Scope</legend>
+    <label class="radio-row"><input type="radio" name="scope" value="claim" checked> Only claim {{ req.claim_id }}</label>
+    <label class="radio-row"><input type="radio" name="scope" value="all_claims"> All my claims on policy {{ req.policy_no }}</label>
+  </fieldset>
+  <label>For how long
+    <select name="duration_days">{% for d in durations %}<option value="{{ d }}" {% if d == 7 %}selected{% endif %}>{{ d }} day{{ "s" if d != 1 }}</option>{% endfor %}</select>
+  </label>
+  <p class="muted small">You can revoke this at any time on the Consent page; access stops immediately.</p>
+  <button id="approve-submit" type="submit">Allow</button>
+</form>
+<form id="deny-form" method="post" action="/consent/requests/{{ req.id }}/deny">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <button id="deny-submit" type="submit" class="danger">Decline</button>
+</form>
+{% elif req.status == "pending" %}
+<p id="patient-only" class="alert">Only {{ people[req.patient_id].name }} can decide this request. They need to sign in as themselves.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DemoTPA portal{% endblock %} · Synthetic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', path='portal.css') }}?v={{ asset_v('portal.css') }}">
+</head>
+<body>
+  {% set path = request.url.path %}
+  <header class="topbar">
+    <a class="brand" href="{{ '/claims' if user else '/' }}">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#12331c"/><path d="M12 6.5v11M6.5 12h11" stroke="#cdf5c6" stroke-width="2.6" stroke-linecap="round"/></svg>
+      DemoTPA <span class="muted" id="synthetic-tag">Synthetic</span></a>
+    {% if user %}
+    <nav aria-label="Main">
+      <a href="/claims" {% if path.startswith("/claims") %}aria-current="page"{% endif %}>Claims</a>
+      <a href="/admin" class="admin-link" {% if path.startswith("/admin") %}aria-current="page"{% endif %}>Demo admin</a>
+    </nav>
+    {% else %}<span></span>{% endif %}
+    <div class="top-actions">
+      {% if user %}
+      <span class="who" id="signed-in-user">Signed in: {{ user }}</span>
+      <form method="post" action="/logout" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button type="submit" class="ghost">Sign out</button>
+      </form>
+      {% elif path != "/login" %}
+      <a class="button" href="/login">Sign in</a>
+      {% endif %}
+    </div>
+  </header>
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

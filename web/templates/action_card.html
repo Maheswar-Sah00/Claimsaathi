@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Upload approval · ClaimSaathi{% endblock %}
+{% block content %}
+{% set errors = {
+  "card_changed": "The details changed since this page was loaded. Review the card below again before approving.",
+  "not_eligible": "This file fails a check, so it cannot be approved.",
+  "execution_blocked": "Not uploaded: a check failed just before the upload. Nothing was sent.",
+  "consent_denied": "Not uploaded: the patient's consent does not allow this now. Nothing was sent.",
+  "approval_required": "Approve the card first. Nothing was uploaded.",
+  "already_decided": "This upload was already decided.",
+  "otp_required": "Sign in to the portal first (a person must type the OTP).",
+  "session_expired": "The portal session expired. Sign in to the portal again.",
+  "portal_unavailable": "The portal could not be reached. Nothing was sent.",
+} %}
+<p class="crumbs"><a href="/actions">Uploads</a> / {{ action.id }}</p>
+<span class="eyebrow">Upload approval</span>
+<h1>Upload for {{ card.claim.claim_id }}</h1>
+
+{% if error %}
+<p class="alert" id="action-error" data-error-code="{{ error }}">{{ errors.get(error, "That did not work (" ~ error ~ ").") }}
+  {% if error in ("otp_required", "session_expired") %}<a href="/portal-session">Open the portal sign-in</a>.{% endif %}</p>
+{% endif %}
+{% if done %}<p class="success" id="action-done" data-done="{{ done }}">Done: {{ state_label }}.</p>{% endif %}
+
+<p id="action-state" class="state state-{{ action.state | lower }}" data-state="{{ action.state }}">
+  <strong>{{ state_label }}</strong>
+  <span class="muted small">· {{ action.attempts }} attempt{{ "" if action.attempts == 1 else "s" }}{% if action.last_error %} · {{ action.last_error }}{% endif %}</span>
+</p>
+
+<section class="card" id="approval-card" data-action-id="{{ action.id }}" data-card-sha256="{{ card_sha256 }}">
+  <h2>What will be uploaded</h2>
+  <dl class="facts-grid">
+    <dt>Patient</dt>
+    <dd id="card-patient" data-person-id="{{ card.patient.id }}">{{ card.patient.name }}</dd>
+    <dt>Claim</dt>
+    <dd id="card-claim">{{ card.claim.claim_id }} · policy {{ card.claim.policy_no }}{% if card.claim.route %} · {{ card.claim.route }}{% endif %}{% if card.claim.hospital %} · {{ card.claim.hospital }}{% endif %}</dd>
+    <dt>Requirement</dt>
+    <dd id="card-requirement" data-req-id="{{ card.requirement.requirement_id }}">{{ card.requirement.requirement_id }}{% if card.requirement.description %} — {{ card.requirement.description }}{% endif %}
+      {% if card.requirement.due_date %}<span class="muted small">(due {{ card.requirement.due_date }})</span>{% endif %}</dd>
+    <dt>File</dt>
+    <dd id="card-filename">{% if card.file %}{{ card.file.filename }} <span class="muted small">{{ "{:,}".format(card.file.size_bytes) }} bytes · {{ card.file.content_type }}{% if card.file.doc_date %} · dated {{ card.file.doc_date }}{% endif %}{% if card.file.invoice_no %} · {{ card.file.invoice_no }}{% endif %}{% if card.file.amount_inr is not none %} · Rs {{ "{:,}".format(card.file.amount_inr) }}{% endif %}</span>{% else %}<strong>no registered file</strong>{% endif %}</dd>
+    <dt>SHA-256</dt>
+    <dd><code id="card-sha256" class="hash">{{ card.file.sha256 if card.file else "-" }}</code></dd>
+    <dt>Destination</dt>
+    <dd id="card-destination">{{ card.destination.upload_url }}, request {{ card.destination.requirement_id }}, through {{ card.destination.method }}</dd>
+  </dl>
+
+  {% if card.file %}
+  <figure id="card-preview">
+    {% if card.file.content_type.startswith("image/") %}
+    <img class="preview" src="{{ card.file.preview_url }}" alt="Preview of {{ card.file.filename }}">
+    {% else %}
+    <iframe class="preview" src="{{ card.file.preview_url }}" title="Preview of {{ card.file.filename }}"></iframe>
+    {% endif %}
+    <figcaption class="muted small"><a href="{{ card.file.preview_url }}" target="_blank" rel="noopener">Open {{ card.file.filename }}</a></figcaption>
+  </figure>
+  {% endif %}
+
+  <h3>Why this file</h3>
+  <p id="card-match-reason">{{ card.matching_evidence.reason or "No matching decision is on record." }}</p>
+  <p class="muted small" id="card-evidence">
+    Match decision {{ card.matching_evidence.match_decision_id or "-" }}
+    {% if card.matching_evidence.portal_evidence_id %} · portal read {{ card.matching_evidence.portal_evidence_id }} at {{ card.matching_evidence.portal_read_at }}
+    {% if card.matching_evidence.portal_html_sha256 %} · page SHA-256 <code class="hash">{{ card.matching_evidence.portal_html_sha256[:16] }}…</code>{% endif %}{% endif %}
+  </p>
+
+  <h3>Checks</h3>
+  <ul class="checks" id="card-checks">
+    {% for c in checks %}
+    <li class="check {{ 'ok' if c.ok else 'fail' }}" data-check="{{ c.name }}" data-ok="{{ 'true' if c.ok else 'false' }}">
+      <span aria-hidden="true">{{ "✓" if c.ok else "✗" }}</span> <strong>{{ c.label }}:</strong> {{ c.detail }}</li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if action.state == "PROPOSED" %}
+<section class="card" id="decision">
+  <h2>Your decision</h2>
+  <p>Nothing is uploaded until you approve. Approving allows ClaimSaathi to upload <strong>this file only</strong>,
+    to <strong>this request only</strong>. Every check runs again just before the upload, and the result is
+    confirmed by reading the portal again.</p>
+  {% if not can_approve %}<p class="alert" id="cannot-approve">This file cannot be approved: see the failed checks above.</p>{% endif %}
+  <div class="button-row">
+    <form method="post" action="/actions/{{ action.id }}/approve" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="card_sha256" value="{{ card_sha256 }}">
+      <button type="submit" id="approve-button" {% if not can_approve %}disabled{% endif %}>Approve upload</button>
+    </form>
+    <form method="post" action="/actions/{{ action.id }}/reject" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button type="submit" class="danger" id="reject-button">Reject</button>
+    </form>
+  </div>
+</section>
+{% elif action.state in ("APPROVED", "RETRY_ALLOWED") %}
+<section class="card" id="execute">
+  <p>{% if action.state == "RETRY_ALLOWED" %}A fresh read showed the file is not on the portal. Retrying runs every
+    check again first.{% else %}Approved. Upload when the portal is signed in.{% endif %}</p>
+  {% if last_blocked and last_blocked.checked_at >= action.updated_at %}
+  <p class="alert" id="blocked-reasons">Last try was stopped before sending:
+    {% for c in last_blocked.checks if not c.ok %}{{ c.detail }}{% if not loop.last %}; {% endif %}{% endfor %}</p>
+  {% endif %}
+  <form method="post" action="/actions/{{ action.id }}/execute">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button type="submit" id="execute-button">{{ "Retry upload" if action.state == "RETRY_ALLOWED" else "Upload now" }}</button>
+  </form>
+</section>
+{% elif action.state in ("UNKNOWN", "PENDING_VERIFY", "EXECUTING") %}
+<section class="card" id="reconcile">
+  <p>The portal has not confirmed this upload yet. Checking reads the portal again; it never uploads.</p>
+  <form method="post" action="/actions/{{ action.id }}/reconcile">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button type="submit" id="reconcile-button">Check the portal again</button>
+  </form>
+</section>
+{% endif %}
+
+<section class="card" id="history">
+  <h2>Record</h2>
+  {% if history.approval %}
+  <p id="approval-record" data-decision="{{ history.approval.decision }}" data-by="{{ history.approval.decided_by }}">
+    {{ history.approval.decision | capitalize }} by {{ history.approval.decided_by }} at {{ history.approval.decided_at }}.</p>
+  {% else %}<p class="muted">No decision yet.</p>{% endif %}
+
+  {% if history.attempts %}
+  <h3>Upload attempts</h3>
+  <table class="table" id="attempts">
+    <thead><tr><th>#</th><th>Started</th><th>Finished</th><th>Portal answer</th><th>Error</th></tr></thead>
+    <tbody>
+    {% for a in history.attempts %}
+      <tr class="attempt" data-outcome="{{ a.outcome or '' }}"><td>{{ a.attempt_no }}</td><td class="nowrap">{{ a.started_at }}</td>
+        <td class="nowrap">{{ a.finished_at or "in progress" }}</td>
+        <td>{{ a.outcome or "-" }}{% if a.http_status %} (HTTP {{ a.http_status }}){% endif %}</td>
+        <td>{{ a.error_code or "" }}{% if a.message %} <span class="muted small">{{ a.message }}</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if history.verifications %}
+  <h3>Portal re-reads</h3>
+  <table class="table" id="verifications">
+    <thead><tr><th>When</th><th>Result</th><th>What the portal showed</th></tr></thead>
+    <tbody>
+    {% for v in history.verifications %}
+      {% set seen = v.input_refs.observed %}
+      <tr class="verification" data-result="{{ v.result }}"><td class="nowrap">{{ v.created_at }}</td>
+        <td>{{ v.result }}<div class="muted small">{{ v.input_refs.state_before }} → {{ v.input_refs.state_after }}</div></td>
+        <td>{{ v.reason }}{% if seen %}<div class="muted small">{{ seen.same_file_under_requirement | length }} matching file(s) of {{ seen.documents_listed }} listed · evidence {{ seen.read_evidence_id }}</div>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ClaimSaathi{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}?v={{ asset_v('app.css') }}">
+</head>
+<body>
+  {% set path = request.url.path %}
+  <header class="topbar">
+    <a class="brand" href="{{ '/dashboard' if person else '/' }}">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#12331c"/><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#cdf5c6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ClaimSaathi</a>
+    <nav aria-label="Main">
+      {% if person %}
+      <a href="/dashboard" {% if path in ("/dashboard", "/workflows") or path.startswith("/workflows/") %}aria-current="page"{% endif %}>Dashboard</a>
+      <a href="/vault" {% if path.startswith("/vault") %}aria-current="page"{% endif %}>Documents</a>
+      <a href="/consent" {% if path.startswith("/consent") %}aria-current="page"{% endif %}>Consent</a>
+      {% else %}
+      <a href="/walkthrough" {% if path == "/walkthrough" %}aria-current="page"{% endif %}>How it works</a>
+      {% endif %}
+    </nav>
+    <div class="top-actions">
+      {% if person %}
+      {% set role = person.role.value if person.role.value is defined else person.role %}
+      <details class="account" id="account-menu">
+        <summary aria-label="Account menu for {{ person.name }}">
+          <span class="avatar" aria-hidden="true">{{ person.name[:1] }}</span>
+          <span class="account-name" id="signed-in-person" data-person-id="{{ person.id }}">{{ person.name }}</span>
+          <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="menu" role="menu">
+          <div class="menu-head"><strong>{{ person.name }}</strong><span>{{ role | capitalize }} · {{ person.id }}</span></div>
+          <a role="menuitem" href="/actions" {% if path.startswith("/actions") %}aria-current="page"{% endif %}>Uploads</a>
+          <a role="menuitem" href="/portal-session" {% if path.startswith("/portal-session") %}aria-current="page"{% endif %}>Portal sign-in</a>
+          <a role="menuitem" href="/test-runs" {% if path.startswith("/test-runs") %}aria-current="page"{% endif %}>Test runs</a>
+          <a role="menuitem" href="/walkthrough" {% if path == "/walkthrough" %}aria-current="page"{% endif %}>How it works</a>
+          <form method="post" action="/auth/logout" class="menu-foot">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button type="submit" role="menuitem" class="menu-signout">Sign out</button>
+          </form>
+        </div>
+      </details>
+      {% else %}
+      <a class="button" href="/auth/login">Sign in</a>
+      {% endif %}
+    </div>
+  </header>
+  <main class="wrap" id="main">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    // Close the account menu on an outside click or Escape.
+    (function () {
+      const menu = document.getElementById("account-menu");
+      if (!menu) return;
+      document.addEventListener("click", (e) => { if (!menu.contains(e.target)) menu.open = false; });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); } });
+    })();
+  </script>
+</body>
+</html>

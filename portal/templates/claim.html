@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ claim.claim_id }}{% endblock %}
+{% block content %}
+<p class="crumbs"><a href="/claims">All claims</a> / {{ claim.claim_id }}</p>
+<span class="eyebrow">{{ claim.route }} claim</span>
+<h1>Claim <span id="claim-id">{{ claim.claim_id }}</span></h1>
+<p class="lead" style="margin-bottom:24px">{{ patient.name }} · {{ claim.hospital }}</p>
+
+{% if flash_upload %}
+<p id="upload-result" class="success" role="status" data-doc-id="{{ flash_upload.doc_id }}" data-sha256="{{ flash_upload.sha256 }}">
+  Uploaded <strong>{{ flash_upload.filename }}</strong> for {{ flash_upload.requirement_id }}. SHA-256 {{ flash_upload.sha256 }}.
+</p>
+{% endif %}
+
+<div class="cols">
+  <section id="claim-status-section" class="card status">
+    <p class="label">Claim status</p>
+    <p class="status-text"><span id="claim-status" data-raw-status="{{ claim.raw_status }}">{{ claim.raw_status }}</span></p>
+    <p class="muted small">Status updated: <time id="status-updated-at" datetime="{{ claim.status_updated_at.isoformat() }}">{{ claim.status_updated_at | ist }}</time></p>
+  </section>
+
+  <section id="preauth-section" class="card">
+    <h2>Pre-authorisation</h2>
+    {% if claim.preauth %}
+    <dl class="grid">
+      <dt>Reference</dt><dd id="preauth-reference">{{ claim.preauth.reference }}</dd>
+      <dt>Pre-authorisation status</dt><dd id="preauth-status">{{ claim.preauth.status }}</dd>
+      <dt>Amount</dt><dd id="preauth-amount" data-amount="{{ claim.preauth.amount }}">{{ claim.preauth.amount | inr }}</dd>
+      <dt>Decided</dt><dd><time id="preauth-decided-at" datetime="{{ claim.preauth.decided_at.isoformat() }}">{{ claim.preauth.decided_at | ist }}</time></dd>
+    </dl>
+    {% else %}
+    <p id="preauth-none" class="muted">No pre-authorisation on this claim ({{ claim.route | lower }}).</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Claim details</h2>
+  <dl id="claim-summary" class="grid">
+    <dt>Policy</dt><dd id="policy-number">{{ claim.policy_no }}</dd>
+    <dt>Patient</dt><dd id="patient-name" data-member-id="{{ patient.member_id }}">{{ patient.name }}</dd>
+    <dt>Relation to policyholder</dt><dd id="patient-relation">{{ patient.relation }}</dd>
+    <dt>Claim route</dt><dd id="claim-route">{{ claim.route }}</dd>
+    <dt>Hospital</dt><dd id="hospital-name">{{ claim.hospital }}</dd>
+    <dt>Admission date</dt><dd id="admission-date">{{ claim.admission_date }}</dd>
+    <dt>Discharge date</dt><dd id="discharge-date">{{ claim.discharge_date or "Not discharged" }}</dd>
+    <dt>Amount claimed</dt><dd id="amount-claimed" data-amount="{{ claim.amount_claimed }}">{{ claim.amount_claimed | inr }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Documents requested</h2>
+  {% if claim.requirements %}
+  <div class="table-wrap">
+  <table id="requested-docs" class="table">
+    <thead><tr><th>Request</th><th>Description</th><th>Due</th><th>State</th><th>Upload</th></tr></thead>
+    <tbody>
+    {% for r in claim.requirements %}
+      <tr class="requirement" data-req-id="{{ r.req_id }}" data-state="{{ r.state }}" data-doc-type="{{ r.doc_type }}">
+        <td class="req-id nowrap">{{ r.req_id }}</td>
+        <td class="req-description">{{ r.description }}</td>
+        <td class="req-due-date nowrap">{{ r.due_date }}</td>
+        <td class="req-state"><span class="tag {{ r.state | lower }}">{{ r.state }}</span>{% if r.received_at %} <span class="muted small">({{ r.received_at | ist }})</span>{% endif %}</td>
+        <td class="req-upload">
+          <form class="upload-form" method="post" enctype="multipart/form-data" action="/claims/{{ claim.claim_id }}/documents" data-req-id="{{ r.req_id }}">
+            <input type="hidden" name="requirement_id" value="{{ r.req_id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required aria-label="File for {{ r.req_id }}">
+            <button type="submit">Upload</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted small" style="margin-top:12px">PDF, PNG or JPG, up to {{ max_mb }} MB. The same file cannot be uploaded twice for one request.</p>
+  {% else %}
+  <p id="requested-docs-none" class="muted">No documents requested.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Uploaded documents</h2>
+  <div class="table-wrap">
+  <table id="uploaded-docs" class="table">
+    <thead><tr><th>File</th><th>For request</th><th>Size</th><th>SHA-256</th><th>Uploaded</th></tr></thead>
+    <tbody>
+    {% for u in claim.uploads %}
+      <tr class="uploaded-doc" data-doc-id="{{ u.doc_id }}" data-sha256="{{ u.sha256 }}" data-requirement-id="{{ u.requirement_id or '' }}">
+        <td class="doc-filename">{{ u.filename }}</td>
+        <td class="doc-requirement nowrap">{{ u.requirement_id or "-" }}</td>
+        <td class="doc-size nowrap" data-bytes="{{ u.size }}">{{ "{:,}".format(u.size) }} bytes</td>
+        <td class="doc-sha256"><code>{{ u.sha256 }}</code></td>
+        <td class="doc-uploaded-at nowrap"><time datetime="{{ u.uploaded_at.isoformat() }}">{{ u.uploaded_at | ist }}</time></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" id="uploaded-docs-none" class="muted">No documents uploaded.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

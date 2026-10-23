@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Demo admin{% endblock %}
+{% block content %}
+<div id="admin-banner" class="admin-banner" role="note">DEMO CONTROL PANEL — exists only to stage hackathon test cases. Not part of any real portal.</div>
+<span class="eyebrow pink">Test controls</span>
+<h1>Demo admin</h1>
+<p class="lead" style="margin-bottom:24px">Reset seed data, change a claim status or make the next upload fail, to stage the test cases.</p>
+{% if done == "reset" %}<p class="success" role="status">Seed data restored.</p>
+{% elif done == "status" %}<p class="success" role="status">Claim status changed.</p>
+{% elif done == "fault" %}<p class="success" role="status">Upload fault mode updated.</p>{% endif %}
+
+<div class="cols">
+<section class="card">
+  <h2>Reset</h2>
+  <form id="reset-form" method="post" action="/admin/reset">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button type="submit" class="danger">Reset all seeded data</button>
+  </form>
+  <p class="muted small">Restores the three claims, removes uploaded files, clears faults and the upload log.</p>
+</section>
+
+<section class="card">
+  <h2>Upload fault mode</h2>
+  <p>Current: <strong id="current-fault" data-fault="{{ fault_mode }}">{{ fault_mode }}</strong>{% if fault_mode != "none" %} ({{ "next upload only" if fault_once else "every upload" }}){% endif %}</p>
+  <form id="fault-form" method="post" action="/admin/fault">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    {% for m in fault_modes %}
+    <label class="radio"><input type="radio" name="mode" value="{{ m }}" {% if m == fault_mode %}checked{% endif %}> {{ m }}</label>
+    {% endfor %}
+    <label class="radio"><input type="checkbox" name="once" value="1" {% if fault_once %}checked{% endif %}> Apply to the next upload only</label>
+    <button type="submit">Set fault mode</button>
+  </form>
+  <ul class="muted small">
+    <li><code>timeout_before_store</code>: waits {{ fault_delay }} s, then returns 504. The file is <strong>not</strong> stored.</li>
+    <li><code>timeout_after_store</code>: stores the file, then waits {{ fault_delay }} s before responding, so the client times out after the server saved it (TC4).</li>
+    <li><code>http_500</code>: returns 500 immediately. The file is not stored.</li>
+  </ul>
+</section>
+
+</div>
+
+<section class="card">
+  <h2>Change claim status</h2>
+  <form id="status-form" method="post" action="/admin/status" class="row">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <select name="claim_id" aria-label="Claim">{% for c in claims %}<option value="{{ c.claim_id }}">{{ c.claim_id }} — {{ c.raw_status }}</option>{% endfor %}</select>
+    <input name="raw_status" list="status-suggestions" placeholder="Raw status text" required maxlength="80" aria-label="Raw status text">
+    <datalist id="status-suggestions">{% for s in suggestions %}<option value="{{ s }}">{% endfor %}</datalist>
+    <button type="submit">Update status</button>
+  </form>
+  <p class="muted small">Any text is accepted, so unknown statuses can be tested.</p>
+</section>
+
+<section class="card">
+  <h2>Upload log</h2>
+  <div class="table-wrap">
+  <table id="upload-log" class="table">
+    <thead><tr><th>Time</th><th>Claim</th><th>Request</th><th>File</th><th>SHA-256</th><th>Fault</th><th>Outcome</th></tr></thead>
+    <tbody>
+    {% for e in upload_log %}
+      <tr class="log-entry" data-outcome="{{ e.outcome }}"><td>{{ e.at | ist }}</td><td>{{ e.claim_id }}</td><td>{{ e.requirement_id }}</td><td>{{ e.filename }}</td><td><code>{{ e.sha256[:12] }}</code></td><td>{{ e.fault }}</td><td>{{ e.outcome }}</td></tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">No upload attempts yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

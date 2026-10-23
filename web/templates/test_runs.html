@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Test runs · ClaimSaathi{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Evaluation</span>
+    <h1>Test runs</h1>
+    <p class="lead">Runs tagged with a test case, read from the runs table, with the verdict the scenario runner recorded.
+      A run without a recorded verdict is shown as such, never as passed.</p>
+  </div>
+</div>
+<div class="grid grid-even" style="margin-bottom:18px">
+  <section class="card"><p class="status-label">Passed</p><p class="status-value" id="count-pass">{{ passed }}</p></section>
+  <section class="card"><p class="status-label">Failed</p><p class="status-value" id="count-fail">{{ failed }}</p></section>
+  <section class="card"><p class="status-label">No verdict recorded</p><p class="status-value" id="count-none">{{ unverified }}</p></section>
+</div>
+{% if official_without_runs %}
+<p class="waiting" id="official-missing">No run recorded yet for: {{ official_without_runs | join(", ") }}. Run <code>pytest -m scenario</code> to execute them.</p>
+{% endif %}
+<section class="card">
+  {% if runs %}
+  <div class="table-wrap">
+  <table class="table stack-mobile" id="test-runs">
+    <thead><tr><th>Case</th><th>Expected / actual</th><th>Verdict</th><th>Run</th><th>Started</th></tr></thead>
+    <tbody>
+    {% for r in runs %}
+      <tr class="test-run" data-test-case="{{ r.test_case }}" data-verdict="{{ r.verdict or 'NONE' }}">
+        <td data-label="Case"><strong>{{ r.test_case }}</strong><div class="small">{{ r.title or "" }}</div></td>
+        <td data-label="Expected / actual" class="small">{% if r.expected %}<details><summary>Details</summary>
+          <p><strong>Expected:</strong> {{ r.expected }}</p><p><strong>Actual:</strong> {{ r.actual }}</p></details>{% else %}<span class="muted">No scenario result</span>{% endif %}</td>
+        <td data-label="Verdict">{% if r.verdict %}<span class="chip {{ r.verdict }}">{{ r.verdict }}</span>{% else %}<span class="chip">No verdict</span>{% endif %}</td>
+        <td data-label="Run" class="small">{% if r.requester_id == me %}<a href="/workflows/{{ r.id }}?tab=trace">{{ r.id }}</a>{% else %}{{ r.id }}{% endif %}
+          <div><span class="chip {{ r.state }}">{{ r.state }}</span>{% if r.final_status %} <span class="chip {{ r.final_status }}">{{ r.final_status }}</span>{% endif %}</div></td>
+        <td data-label="Started" class="nowrap small muted">{{ r.started_at | ist }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<p class="muted">No test runs recorded in this database. Run <code>pytest -m scenario</code>.</p>{% endif %}
+</section>
+{% endblock %}

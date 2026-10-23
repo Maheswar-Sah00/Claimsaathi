@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Your documents · ClaimSaathi{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+<span class="eyebrow">Family vault</span>
+<h1>Your documents</h1>
+<p class="lead">Synthetic demo files registered to you. ClaimSaathi only uses documents from this list, and checks
+  each one before proposing an upload.</p>
+</div></div>
+{% if files %}
+<section class="card"><div class="table-wrap">
+<table id="vault-files" class="table">
+  <thead><tr><th>File</th><th>Type</th><th>Patient</th><th>Date</th><th>Invoice / amount</th><th>Readable</th><th>Details from</th></tr></thead>
+  <tbody>
+  {% for f in files %}
+    <tr class="vault-file" data-vault-file-id="{{ f.id }}" data-sha256="{{ f.sha256 }}">
+      <td><a href="/vault/files/{{ f.id }}" target="_blank" rel="noopener">{{ f.original_name }}</a>
+        <div class="muted small">{{ f.id }} · {{ "{:,}".format(f.size_bytes) }} bytes</div></td>
+      <td>{{ (f.doc_type or "unknown") | replace("_", " ") }}</td>
+      <td>{{ f.patient_name or "not found" }}</td>
+      <td class="nowrap">{{ f.doc_date or "not found" }}</td>
+      <td>{{ f.invoice_no or "-" }}{% if f.amount_inr is not none %} · Rs {{ "{:,}".format(f.amount_inr) }}{% endif %}</td>
+      <td>{% if f.legible is none %}unknown{% elif f.legible %}yes{% else %}<strong>no</strong>{% endif %}</td>
+      <td class="muted small">{{ (f.extraction_source or "not read yet") | replace("_", " ") }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></section>
+{% else %}
+<p class="muted">No documents registered to you.</p>
+{% endif %}
+{% endblock %}

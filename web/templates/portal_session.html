@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Portal sign-in · ClaimSaathi{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+<span class="eyebrow">TPA portal</span>
+<h1>Portal sign-in</h1>
+<p class="lead">ClaimSaathi signs in to the TPA portal for you, then stops at the OTP screen. You read the code and type it here.
+  The agent never reads the code itself.</p>
+</div></div>
+{% set messages = {
+  "otp_rejected": "That OTP was not accepted. Check the screen and try again.",
+  "session_expired": "The portal session expired. Start the sign-in again.",
+  "portal_unavailable": "The portal is not responding right now.",
+  "captcha_detected": "The portal is showing a CAPTCHA. Please complete it on the portal yourself.",
+  "layout_changed": "The portal page looks different from expected, so the agent stopped.",
+  "login_failed": "The portal rejected the demo username or password."} %}
+{% if error %}<p id="portal-error" class="alert" role="alert" data-error="{{ error }}">{{ messages.get(error, "The portal step failed.") }}</p>{% endif %}
+<p>Status: <strong id="portal-state" data-state="{{ state }}">{{ state | replace("_", " ") }}</strong></p>
+
+{% if state == "otp_required" and has_screen %}
+<div class="otp-layout">
+  <figure class="card">
+    <img src="/api/portal/session/otp-screen" alt="Screenshot of the portal's OTP screen" class="shot">
+    <figcaption class="muted small">What the portal is showing right now (synthetic demo SMS included).</figcaption>
+  </figure>
+  <form id="portal-otp-form" method="post" action="/portal-session/otp" class="card narrow">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>OTP from the portal <input id="portal-otp" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>
+    <button type="submit">Continue sign-in</button>
+  </form>
+</div>
+{% elif state != "authenticated" and is_owner %}
+<form id="portal-start-form" method="post" action="/portal-session/start">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <button type="submit">Sign in to the portal</button>
+</form>
+{% elif state == "authenticated" %}
+<p class="success" role="status">Signed in to the portal. The agent can read claims you have consent for.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Enter OTP · ClaimSaathi{% endblock %}
+{% block content %}
+<span class="eyebrow">Verify</span>
+<h1>Enter the one-time password</h1>
+<p class="lead" style="margin-bottom:24px">An OTP was generated for <strong>{{ who.name }}</strong>. A person must read it and type it in.</p>
+{% if error %}<p id="otp-error" class="alert" role="alert">{{ error }}</p>{% endif %}
+<div class="otp-layout">
+  <form id="otp-form" method="post" action="/auth/otp" class="card narrow">
+    <label>OTP <input id="otp" name="otp" class="otp-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>
+    <button id="otp-submit" type="submit">Verify</button>
+  </form>
+  <aside id="demo-sms-panel" class="sms" aria-label="Simulated SMS">
+    <p class="sms-label">DEMO SMS — SIMULATION. NO REAL SMS WAS SENT.</p>
+    <p class="muted small">To: {{ who.name }}’s registered phone ({{ challenge.destination }})</p>
+    <p class="sms-body">ClaimSaathi: <strong id="demo-sms-otp">{{ challenge.code }}</strong> is your sign-in code. Valid 5 minutes.</p>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}{{ view.claim_id }} · ClaimSaathi{% endblock %}
+{% block content %}
+{% set w = view.waiting %}
+{% set f = view.final_response %}
+<p class="crumbs"><a href="/dashboard">Dashboard</a> / {{ view.claim_id }}</p>
+<div class="page-head">
+  <div>
+    <span class="eyebrow">Claim check</span>
+    <h1>Claim {{ view.claim_id }}</h1>
+    <p class="muted small">{{ "Status and documents" if view.intent == "upload" else "Status check" }} · run <code>{{ view.run_id }}</code></p>
+  </div>
+  <p id="workflow-status" class="state state-{{ view.status }}" data-status="{{ view.status }}" data-run-state="{{ view.run_state }}">
+    <span class="chip {{ view.status if view.status in ('completed', 'blocked', 'failed', 'running') else 'waiting' }}">{{ label }}</span></p>
+</div>
+
+<nav class="tabs" role="tablist" aria-label="Views">
+  <a role="tab" href="?tab=claim" aria-selected="{{ 'true' if tab == 'claim' else 'false' }}" id="tab-claim">Claim</a>
+  <a role="tab" href="?tab=trace" aria-selected="{{ 'true' if tab == 'trace' else 'false' }}" id="tab-trace">Agent trace ({{ view.steps | length }})</a>
+</nav>
+
+{% if error %}
+{% set errors = {"not_waiting": "This step was already answered; the page now shows where the run is.",
+                 "not_found": "That is not one of your checks.", "otp_rejected": "The portal did not accept that OTP.",
+                 "session_expired": "The portal session ended. Ask the portal for a new OTP below."} %}
+<p class="alert" id="workflow-error" data-error-code="{{ error }}" role="alert">{{ errors.get(error, "That did not work (" ~ error ~ ").") }}</p>
+{% endif %}
+
+<section role="tabpanel" aria-labelledby="tab-claim" id="claim-pane" {% if tab != "claim" %}hidden{% endif %}>
+  <ol class="stepper" id="progress" aria-label="Progress">
+    {% for s in progress %}<li class="{{ s.state }}" data-stage="{{ s.label }}" data-state="{{ s.state }}">{{ s.label }}<br><span class="muted">{{ s.word }}</span></li>{% endfor %}
+  </ol>
+
+  {% if w and w.type == "otp" %}
+  <section class="card approval" id="waiting-otp" aria-live="polite">
+    <h2>The portal needs an OTP</h2>
+    {% if view.portal_state == "otp_required" %}
+    <p>{{ w.message }}</p>
+    {% if w.last_error %}<p class="alert" role="alert">{{ w.last_error }} (try {{ w.try }} of {{ w.max_tries }})</p>{% endif %}
+    <div class="grid grid-2">
+      <figure><img class="shot" src="{{ w.otp_screen_url }}" alt="Screenshot of the portal's OTP screen"><figcaption class="muted small">What the portal is showing now.</figcaption></figure>
+      <form method="post" action="/workflows/{{ view.run_id }}/otp">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <label for="otp">OTP from the registered phone
+          <input name="otp" id="otp" class="otp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+          <span class="hint">In this demo, the code is on the portal's simulated SMS panel. ClaimSaathi never reads it.</span>
+        </label>
+        <button type="submit" id="otp-submit">Continue</button>
+      </form>
+    </div>
+    {% else %}
+    <p>The portal sign-in was lost (for example after a restart). Ask the portal for a new OTP, then type it here.</p>
+    <form method="post" action="/workflows/{{ view.run_id }}/otp">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="otp" value="">
+      <button type="submit" id="otp-restart">Send a new OTP</button>
+    </form>
+    {% endif %}
+  </section>
+  {% elif w and w.type in ("upload_approval", "upload_retry") %}
+  {% set c = w.card %}
+  <section class="card approval" id="waiting-approval" data-action-id="{{ w.action_id }}" aria-live="polite">
+    <h2>{{ "Try the upload again?" if w.type == "upload_retry" else "Approve this upload?" }}</h2>
+    <p>{{ w.question }} Nothing is sent unless you approve, and the result is confirmed by reading the portal again.</p>
+    <div class="grid grid-2">
+      <div>
+        <dl class="facts-grid">
+          <dt>Patient</dt><dd>{{ c.patient.name }}</dd>
+          <dt>Claim</dt><dd>{{ c.claim.claim_id }} · {{ c.claim.policy_no }}</dd>
+          <dt>Requirement</dt><dd id="card-requirement" data-req-id="{{ c.requirement.requirement_id }}">{{ c.requirement.requirement_id }}{% if c.requirement.description %}: {{ c.requirement.description }}{% endif %}</dd>
+          <dt>File</dt><dd>{% if c.file %}<a href="{{ c.file.preview_url }}" target="_blank" rel="noopener">{{ c.file.filename }}</a>
+            <div class="muted small">{{ c.file.doc_type | replace("_", " ") if c.file.doc_type }}{% if c.file.doc_date %} · dated {{ c.file.doc_date }}{% endif %}</div>{% endif %}</dd>
+          <dt>SHA-256</dt><dd><code class="hash" id="card-sha256">{{ c.file.sha256 if c.file else "-" }}</code></dd>
+          <dt>Goes to</dt><dd>{{ c.destination.upload_url }}, request {{ c.destination.requirement_id }}</dd>
+          <dt>Evidence</dt><dd>{% if c.matching_evidence.portal_evidence_id %}<a href="/evidence/{{ c.matching_evidence.portal_evidence_id }}">portal read {{ c.matching_evidence.portal_read_at | ist }}</a>{% else %}-{% endif %}</dd>
+        </dl>
+        <p class="small"><strong>Why this file:</strong> {{ c.matching_evidence.reason }}</p>
+        <ul class="checks small">{% for ch in c.checks %}<li class="check {{ 'ok' if ch.ok else 'fail' }}"><span aria-hidden="true">{{ "✓" if ch.ok else "✗" }}</span> {{ ch.detail }}</li>{% endfor %}</ul>
+      </div>
+      {% if c.file %}
+      <figure id="card-preview">
+        {% if c.file.content_type.startswith("image/") %}<img class="preview" src="{{ c.file.preview_url }}" alt="Preview of {{ c.file.filename }}">
+        {% else %}<iframe class="preview" src="{{ c.file.preview_url }}" title="Preview of {{ c.file.filename }}"></iframe>{% endif %}
+      </figure>
+      {% endif %}
+    </div>
+    <div class="button-row">
+      <form method="post" action="/workflows/{{ view.run_id }}/decision" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="decision" value="approve">
+        <input type="hidden" name="action_id" value="{{ w.action_id }}"><input type="hidden" name="card_sha256" value="{{ w.card_sha256 }}">
+        <button type="submit" id="approve-button">{{ "Retry upload" if w.type == "upload_retry" else "Approve and upload" }}</button>
+      </form>
+      <form method="post" action="/workflows/{{ view.run_id }}/decision" class="inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="decision" value="reject">
+        <input type="hidden" name="action_id" value="{{ w.action_id }}">
+        <button type="submit" class="danger" id="reject-button">{{ "Not now" if w.type == "upload_retry" else "Reject" }}</button>
+      </form>
+      <a href="{{ w.card_url }}" class="small">Full card and checks</a>
+    </div>
+  </section>
+  {% elif view.status == "running" %}
+  <section class="card notice" id="stopped">
+    <p>This check stopped part-way. Continuing picks it up from the last saved step. An upload is never sent twice,
+      and an unclear upload is checked on the portal first.</p>
+    <form method="post" action="/workflows/{{ view.run_id }}/continue">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit" id="continue-button">Continue</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if f %}
+  {% if f.outcome == "blocked" and f.consent and f.consent.read and f.consent.read != "ALLOW" %}
+  <section class="card" id="consent-blocked" data-consent-result="{{ f.consent.read }}">
+    <h2>Consent needed</h2>
+    <p>{{ f.text }}</p>
+    {% if consent_request %}
+    <p>A request has been sent to <strong>{{ patient.name }}</strong> (<code>{{ consent_request.id }}</code>,
+      {{ consent_request.status }}, asks for {{ consent_request.actions | join(" and ") | replace("_", " ") }}).
+      {{ patient.name }} signs in with their own OTP and decides on the request page.</p>
+    <div class="button-row">
+      <a class="button secondary" id="patient-flow" href="/auth/login?next=/consent/requests/{{ consent_request.id }}">Sign in as {{ patient.name }} to review (demo)</a>
+      <span class="muted small">When access is given, start the check again from the dashboard.</span>
+    </div>
+    {% endif %}
+  </section>
+  {% elif f.outcome in ("blocked", "failed") %}
+  <section class="card" id="stopped-reason">
+    <p class="alert" role="alert">{{ f.text }}</p>
+    {% if f.fetch == "FETCH_FAILED" %}<p class="muted small">Result: <span class="chip FETCH_FAILED">FETCH_FAILED</span>. Nothing was read, so no status is shown and nothing is assumed.</p>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if f.canonical_status %}
+  {% if f.fetch == "FETCH_FAILED" %}<p class="waiting" role="status">The portal could not be read again after the upload. What you see is from the earlier read, not a confirmation that nothing changed.</p>{% endif %}
+  {% for d in unknown_uploads %}<p class="waiting" role="status">The upload for {{ d.requirement_id }} has an unknown outcome. The portal is read again before any retry; nothing is sent twice.</p>{% endfor %}
+
+  <div class="grid grid-2">
+    <section class="card status-card {{ f.canonical_status }}" id="status-card" aria-labelledby="status-title">
+      <p class="status-label" id="status-title">Claim status</p>
+      <p class="status-value" id="reply-status" data-canonical="{{ f.canonical_status }}">{{ f.canonical_status | replace("_", " ") | title }}</p>
+      <p class="status-plain">{% if f.patient_name %}{{ f.patient_name }}'s claim: {% endif %}{{ plain.get(f.canonical_status, "") }}.</p>
+      <dl class="kv">
+        <dt>Portal shows</dt><dd id="raw-status">“{{ f.raw_status }}”</dd>
+        <dt>Last updated</dt><dd id="status-stamp">{{ f.status_stamp | ist }}</dd>
+        <dt>How decided</dt><dd class="small muted">{{ f.status_reason }}</dd>
+      </dl>
+    </section>
+    <section class="card" id="preauth-card" aria-labelledby="preauth-title">
+      <p class="status-label" id="preauth-title">Pre-authorisation (separate)</p>
+      {% if f.preauth %}
+      <p class="status-value" style="font-size:1.25rem" data-preauth="{{ f.preauth.status }}">{{ f.preauth.status }}{% if f.preauth.amount_inr is not none %} · Rs {{ "{:,}".format(f.preauth.amount_inr) }}{% endif %}</p>
+      <p class="small muted">{{ f.preauth.note }}</p>
+      {% else %}<p class="muted">No pre-authorisation on this claim.</p>{% endif %}
+    </section>
+  </div>
+  {% endif %}
+
+  {% if f.next_step %}
+  <section class="next-step" id="reply-next" aria-label="Recommended next step"><strong>Next step</strong><p>{{ f.next_step[:1] | upper }}{{ f.next_step[1:] }}.</p></section>
+  {% endif %}
+
+  {% if f.documents %}
+  <section class="card" aria-labelledby="docs-title">
+    <h2 id="docs-title">Documents the insurer asked for</h2>
+    <div class="table-wrap">
+    <table class="table stack-mobile" id="reply-documents">
+      <thead><tr><th>Requested item</th><th>Matched file</th><th>State</th><th>Reason</th><th>Next action</th></tr></thead>
+      <tbody>
+      {% for d in f.documents %}
+        <tr class="reply-document" data-req-id="{{ d.requirement_id }}" data-match="{{ d.match or '' }}" data-action-state="{{ d.action_state or '' }}">
+          <td data-label="Requested item"><strong>{{ d.requirement_id }}</strong><div class="small">{{ d.description or d.type }}</div></td>
+          <td data-label="Matched file">{{ d.matched_file or "—" }}</td>
+          <td data-label="State"><span class="chip">{{ d.portal_state }}</span>
+            {% if d.action_state %}<span class="chip {{ d.action_state }}">{{ d.action_state | replace("_", " ") }}</span>
+            {% elif d.match %}<span class="chip {{ d.match }}">{{ d.match | replace("_", " ") }}</span>{% endif %}</td>
+          <td data-label="Reason" class="small">{{ d.note }}{% if d.reason and d.match != "MATCHED" and d.reason != d.note %}<div class="muted">{{ d.reason }}</div>{% endif %}
+            {% if d.hospital_request %}<details><summary>Drafted note to the hospital</summary><pre class="small">{{ d.hospital_request }}</pre></details>{% endif %}</td>
+          <td data-label="Next action" class="small">{% if d.action_id %}<a href="/actions/{{ d.action_id }}">{{ d.next_action }}</a>{% else %}{{ d.next_action }}{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if f.canonical_status %}
+  <section class="card" id="final-response" data-outcome="{{ f.outcome }}" data-fetch="{{ f.fetch }}">
+    <h2>In plain words</h2>
+    <p id="reply-text">{{ f.text }}</p>
+    <p class="muted small">Checked by the reply guard: {{ f.reply_guard }}.</p>
+  </section>
+  {% endif %}
+  <p class="muted small" id="reply-evidence">Evidence: {% for e in f.evidence %}<a href="/evidence/{{ e }}">{{ e }}</a>{% if not loop.last %}, {% endif %}{% else %}none{% endfor %}</p>
+  {% endif %}
+</section>
+
+<section role="tabpanel" aria-labelledby="tab-trace" id="steps" {% if tab != "trace" %}hidden{% endif %}>
+  <section class="card">
+    <h2>Agent trace</h2>
+    <p class="muted small">Every step the workflow took, as stored in the database: what it decided, the outcome and the evidence behind it.</p>
+    <div class="table-wrap">
+    <table class="table stack-mobile">
+      <thead><tr><th>#</th><th>Step</th><th>Time (IST)</th><th>Outcome</th><th>Decision</th><th>Evidence</th></tr></thead>
+      <tbody>
+      {% for s in view.steps %}
+        <tr class="step" data-node="{{ s.node }}" data-result="{{ s.result }}">
+          <td data-label="#">{{ s.seq }}</td>
+          <td data-label="Step" class="nowrap"><strong>{{ s.node }}</strong>{% if s.next_node and s.next_node != "__end__" %}<div class="muted small">→ {{ s.next_node }}</div>{% endif %}</td>
+          <td data-label="Time" class="nowrap small">{{ s.started_at | ist }}{% if s.finished_at != s.started_at %}<br><span class="muted">to {{ s.finished_at | ist }}</span>{% endif %}</td>
+          <td data-label="Outcome"><span class="chip {{ s.result }}">{{ s.result }}</span></td>
+          <td data-label="Decision" class="small">{{ s.decision }}{% if s.error %}<div class="alert small" style="margin:6px 0 0">{{ s.error }}</div>{% endif %}</td>
+          <td data-label="Evidence" class="small">
+            {% for e in s.evidence_ids %}{% set ev = evidence.get(e) %}
+            <div class="trace-evidence"><a href="/evidence/{{ e }}">{{ e }}</a>{% if ev %} <span class="muted">{{ ev.kind | replace("_", " ") }}</span>
+              {% if ev.html_sha256 %}<div class="muted"><code>{{ ev.html_sha256[:12] }}…</code></div>{% endif %}
+              {% if ev.screenshot %}<a href="/evidence/{{ e }}/screenshot" target="_blank" rel="noopener"><img class="thumb" loading="lazy" src="/evidence/{{ e }}/screenshot" alt="Screenshot {{ e }}"></a>{% endif %}{% endif %}</div>
+            {% endfor %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+</section>
+{% endblock %}

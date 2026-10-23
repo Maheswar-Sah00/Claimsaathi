@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Runtime data (SQLite, portal uploads, screenshots)
+data/
+*.db
+*.db-journal
+evidence/*
+!evidence/.gitkeep

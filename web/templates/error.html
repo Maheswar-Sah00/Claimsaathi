@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Error · ClaimSaathi{% endblock %}
+{% block content %}
+<span class="eyebrow pink">Error</span>
+<h1>Something went wrong</h1>
+<p id="error-message" class="alert" role="alert" data-error-code="{{ code }}">{{ message }}</p>
+<p class="muted">Error code: <code id="error-code">{{ code }}</code></p>
+<p><a href="/consent">Consent</a> · <a href="/">Home</a></p>
+{% endblock %}

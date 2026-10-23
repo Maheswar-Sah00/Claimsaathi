@@ -1,0 +1,7 @@
+* text=auto
+*.pdf binary
+*.png binary
+*.jpg binary
+*.svg -text
+*.excalidraw -text
+*.woff2 binary

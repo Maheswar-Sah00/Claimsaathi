@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Claims{% endblock %}
+{% block content %}
+<div class="page-head">
+  <span class="eyebrow">Family floater</span>
+  <h1>Claims on policy <span id="policy-no">{{ policy.policy_no }}</span></h1>
+  <p class="lead">{{ policy.insurer }} · TPA: {{ policy.tpa }} · Sum insured {{ policy.sum_insured | inr }} · Family floater</p>
+</div>
+<section class="card">
+  <div class="table-wrap">
+  <table id="claims-table" class="table">
+    <thead><tr><th>Claim</th><th>Patient</th><th>Route</th><th>Admitted</th><th>Status</th><th>Updated</th></tr></thead>
+    <tbody>
+    {% for c in claims %}
+      <tr class="claim-row" data-claim-id="{{ c.claim_id }}">
+        <td class="claim-id"><a href="/claims/{{ c.claim_id }}">{{ c.claim_id }}</a></td>
+        <td class="claim-patient">{{ members[c.patient_id].name }} ({{ members[c.patient_id].relation }})</td>
+        <td class="claim-route">{{ c.route }}</td>
+        <td class="claim-admission">{{ c.admission_date }}</td>
+        <td class="claim-status">{{ c.raw_status }}</td>
+        <td class="claim-updated"><time datetime="{{ c.status_updated_at.isoformat() }}">{{ c.status_updated_at | ist }}</time></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+<h2 style="margin-top:32px">Members</h2>
+<ul id="members" class="member-list">
+  {% for m in policy.members %}<li class="member" data-member-id="{{ m.member_id }}">{{ m.name }}, {{ m.age }} ({{ m.relation }})</li>{% endfor %}
+</ul>
+{% endblock %}

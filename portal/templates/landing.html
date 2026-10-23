@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="eyebrow">Health claims portal</span>
+    <h1>DemoTPA claims portal</h1>
+    <p class="lead">A <strong>synthetic</strong> third-party-administrator portal built as the demo target for
+      ClaimSaathi (Ziro Agentic AI Hackathon 2026). It imitates how a family checks a health claim:
+      sign in, enter an OTP, read the claim status and upload requested documents.</p>
+    <p class="row"><a class="button" href="/login">Sign in</a> <a class="button secondary" href="/health">Service health</a></p>
+  </div>
+  <div class="panel" aria-hidden="true">
+    <div class="card">
+      <p class="label">Claim status</p>
+      <p class="status-text" style="font-size:1.5rem">Query Raised</p>
+      <p class="muted small" style="margin:0">CLM-2026-0142 · Cashless · 2 documents requested</p>
+    </div>
+    <div class="card">
+      <p class="label">Pre-authorisation</p>
+      <p class="amount" style="margin:6px 0 0">Approved · Rs 1,20,000</p>
+    </div>
+  </div>
+</section>
+<section class="points">
+  <div class="point"><span class="num">01 / Synthetic</span><p><strong>No real records</strong>No real insurer, TPA, hospital, person or medical record is represented.</p></div>
+  <div class="point"><span class="num">02 / OTP</span><p><strong>Human OTP</strong>The OTP is a simulation shown on screen; no SMS is sent.</p></div>
+  <div class="point"><span class="num">03 / Admin</span><p><strong>Test controls</strong>The demo admin page can reset data and inject upload faults.</p></div>
+</section>
+{% endblock %}
