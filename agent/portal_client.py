@@ -407,7 +407,9 @@ class PlaywrightTpaDriver:
             self._browser = self._pw.chromium.connect_over_cdp(session.connect_url)
             self._context = self._browser.contexts[0]
         else:
-            self._browser = self._pw.chromium.launch(headless=self.headless)
+            # Container-safe: small /dev/shm and no GPU on hosted platforms.
+            self._browser = self._pw.chromium.launch(
+                headless=self.headless, args=["--disable-dev-shm-usage", "--disable-gpu"])
             self._context = self._browser.new_context(viewport={"width": 1200, "height": 900})
         self._page = self._context.new_page()
         self._page.set_default_timeout(self.timeout_ms)
